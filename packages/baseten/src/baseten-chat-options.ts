@@ -1,5 +1,6 @@
 // https://docs.baseten.co/development/model-apis/overview#supported-models
 // Below is the current list of models supported by Baseten models api.
+// Ohter dedicated models are also supported, but not listed here.
 export type BasetenChatModelId =
   | 'deepseek-ai/DeepSeek-R1-0528'
   | 'deepseek-ai/DeepSeek-V3-0324'
