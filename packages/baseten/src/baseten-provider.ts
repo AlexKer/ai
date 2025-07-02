@@ -90,12 +90,18 @@ export function createBaseten(
   options: BasetenProviderSettings = {},
 ): BasetenProvider {
   const baseURL = withoutTrailingSlash(options.baseURL ?? defaultBaseURL);
-  const getHeaders = () => ({
-    Authorization: `Bearer ${loadApiKey({
-      apiKey: options.apiKey,
-      environmentVariableName: 'BASETEN_API_KEY',
-      description: 'Baseten API key',
-    })}`,
+  const getHeaders = (isPredict = false) => ({
+    Authorization: isPredict
+      ? `Api-Key ${loadApiKey({
+          apiKey: options.apiKey,
+          environmentVariableName: 'BASETEN_API_KEY',
+          description: 'Baseten API key',
+        })}`
+      : `Bearer ${loadApiKey({
+          apiKey: options.apiKey,
+          environmentVariableName: 'BASETEN_API_KEY',
+          description: 'Baseten API key',
+        })}`,
     ...options.headers,
   });
 
@@ -127,85 +133,11 @@ export function createBaseten(
           ...getCommonModelConfig('chat', customURL),
           errorStructure: basetenErrorStructure,
         });
-      } else {
-        // For /predict endpoints, use custom format with request transformation
-        const model = new OpenAICompatibleChatLanguageModel(modelId ?? 'chat', {
-          provider: 'baseten.chat',
-          url: ({ path }: { path: string }) => {
-            // For custom model URLs, don't append the path - use the URL as-is
-            return customURL;
-          },
-          headers: getHeaders,
-          fetch: options.fetch,
-          errorStructure: basetenErrorStructure,
-        });
-
-        // Override the doGenerate method to transform the request format
-        const originalDoGenerate = model.doGenerate.bind(model);
-        model.doGenerate = async (params) => {
-          // For chat completions, Baseten expects the prompt as 'input'
-          if (params.prompt && Array.isArray(params.prompt)) {
-            // Convert chat messages to a single input string
-            const input = params.prompt
-              .map(msg => {
-                if (msg.role === 'user') {
-                  return msg.content
-                    .map(content => 
-                      content.type === 'text' ? content.text : ''
-                    )
-                    .join('');
-                }
-                return '';
-              })
-              .filter(text => text.length > 0)
-              .join('\n');
-            
-            // Create Baseten's expected request format
-            const basetenRequest = {
-              input: input,
-            };
-            
-            // Make the request directly with Baseten's format
-            const response = await fetch(customURL, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...getHeaders(),
-              },
-              body: JSON.stringify(basetenRequest),
-            });
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`Baseten API error: ${response.status} ${errorText}`);
-            }
-            
-            const responseData = await response.json();
-            
-            // Transform Baseten's response to AI SDK format
-            return {
-              content: [{ type: 'text', text: responseData.output || responseData.text || '' }],
-              finishReason: 'stop',
-              usage: {
-                inputTokens: responseData.usage?.prompt_tokens,
-                outputTokens: responseData.usage?.completion_tokens,
-                totalTokens: responseData.usage?.total_tokens,
-              },
-              response: {
-                headers: Object.fromEntries(response.headers.entries()),
-                body: JSON.stringify(responseData),
-              },
-              warnings: [],
-            };
-          }
-          
-          return originalDoGenerate(params);
-        };
-
-        return model;
+      } else if (customURL.includes('/predict')) {
+        throw new Error('Not supported. You must use a /sync/v1 endpoint for chat models.');
       }
     }
-    
+
     // Use default OpenAI-compatible format for Models API
     return new OpenAICompatibleChatLanguageModel(modelId ?? 'chat', {
       ...getCommonModelConfig('chat'),

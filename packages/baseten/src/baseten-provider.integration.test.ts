@@ -71,7 +71,7 @@ describe('BasetenProvider Integration Tests', () => {
         console.log('⏭️  Skipping test - no API key');
         return;
       }
-
+      // Nomic Embed Code
       const embeddingBaseten = createBaseten({
         modelURL: 'https://model-03y7n6e3.api.baseten.co/environments/production/sync/v1'
       });
@@ -95,6 +95,7 @@ describe('BasetenProvider Integration Tests', () => {
         return;
       }
 
+      // Nomic Embed Code
       const embeddingBaseten = createBaseten({
         modelURL: 'https://model-03y7n6e3.api.baseten.co/environments/production/predict'
       });
@@ -118,6 +119,7 @@ describe('BasetenProvider Integration Tests', () => {
         return;
       }
 
+      // Qwen 3 235B
       const customBaseten = createBaseten({
         modelURL: 'https://model-owpvn6zw.api.baseten.co/environments/production/sync/v1'
       });
@@ -128,30 +130,6 @@ describe('BasetenProvider Integration Tests', () => {
       const { text } = await generateText({
         model: customChatModel as any,
         prompt: 'Say hello from the OpenAI-compatible chat model!',
-      });
-      
-      expect(text).toBeDefined();
-      expect(typeof text).toBe('string');
-      expect(text.length).toBeGreaterThan(0);
-    }, 30000);
-
-    it('should work with chat using /predict endpoint', async () => {
-      
-      if (!hasApiKey) {
-        console.log('⏭️  Skipping test - no API key');
-        return;
-      }
-
-      const customBaseten = createBaseten({
-        modelURL: 'https://model-owpvn6zw.api.baseten.co/environments/production/predict'
-      });
-      
-      const customChatModel = customBaseten();
-      expect(customChatModel).toBeDefined();
-      
-      const { text } = await generateText({
-        model: customChatModel as any,
-        prompt: 'Say hello from the non-OpenAI-compatible chat model!',
       });
       
       expect(text).toBeDefined();
